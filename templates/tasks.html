@@ -2,136 +2,123 @@
 
 {% block title %}{{ project.name }}'s Tasks - Freelancer Manager{% endblock %}
 
-{% block content %}
-<h1 class="page-title"><i class="fas fa-tasks me-3"></i>{{ project.name }}'s Tasks</h1>
-
-<nav aria-label="breadcrumb" class="mb-4">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('clients') }}">Clients</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('client_projects', client_id=project.client_id) }}">{{ project.client.name }}</a></li>
-        <li class="breadcrumb-item active">{{ project.name }}</li>
-    </ol>
-</nav>
-
-<div class="glass-card p-4 mb-4">
-    <div class="d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-            <div class="project-icon me-3">
-                <i class="fas fa-folder-open"></i>
-            </div>
-            <div>
-                <h4 class="mb-0">{{ project.name }}</h4>
-                <small class="text-white opacity-75">
-                    <span class="badge badge-modern {% if project.status == 'active' %}bg-success{% elif project.status == 'completed' %}bg-primary{% else %}bg-secondary{% endif %}">
-                        {{ project.status|title }}
-                    </span>
-                    {% if project.budget %}
-                    <span class="ms-2">Budget: ${{ "%.2f"|format(project.budget) }}</span>
-                    {% endif %}
-                </small>
-            </div>
-        </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-                <i class="fas fa-plus me-2"></i>Add Task
-            </button>
-            <form action="{{ url_for('generate_ai_tasks', project_id=project.id) }}" method="POST" id="aiGenerateForm">
-                <button type="submit" class="btn btn-sparkle" id="aiGenerateBtn">
-                    <span class="btn-text">
-                        <i class="fas fa-magic me-2"></i>Auto-Generate with AI
-                    </span>
-                    <span class="btn-loading" style="display: none;">
-                        <i class="fas fa-spinner fa-spin me-2"></i>Generating...
-                    </span>
-                </button>
-            </form>
-        </div>
-    </div>
-</div>
-
-{% if tasks %}
-<div class="row">
-    {% for task in tasks %}
-    <div class="col-12 mb-3">
-        <div class="task-card card-modern">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="task-content flex-grow-1">
-                        <div class="d-flex align-items-center mb-2">
-                            <h5 class="task-title mb-0 me-3">{{ task.title }}</h5>
-                            <span class="priority-badge badge-modern {% if task.priority == 'high' %}bg-danger{% elif task.priority == 'medium' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
-                                {% if task.priority == 'high' %}<i class="fas fa-exclamation-circle me-1"></i>{% elif task.priority == 'medium' %}<i class="fas fa-minus-circle me-1"></i>{% else %}<i class="fas fa-arrow-down me-1"></i>{% endif %}
-                                {{ task.priority|title }}
-                            </span>
-                            <span class="status-badge badge-modern {% if task.status == 'completed' %}bg-success{% elif task.status == 'in_progress' %}bg-info{% else %}bg-secondary{% endif %} ms-2">
-                                {% if task.status == 'completed' %}<i class="fas fa-check-circle me-1"></i>{% elif task.status == 'in_progress' %}<i class="fas fa-spinner me-1"></i>{% else %}<i class="fas fa-clock me-1"></i>{% endif %}
-                                {{ task.status|replace('_', ' ')|title }}
-                            </span>
-                        </div>
-                        
-                        {% if task.description %}
-                        <p class="task-description text-muted mb-3">{{ task.description }}</p>
-                        {% endif %}
-                        
-                        <div class="task-meta d-flex flex-wrap gap-3">
-                            {% if task.due_date %}
-                            <div class="meta-item">
-                                <i class="fas fa-calendar-alt me-2"></i>
-                                <span class="{% if task.due_date < today %}text-danger{% endif %}">
-                                    Due: {{ task.due_date.strftime('%B %d, %Y') }}
-                                </span>
-                            </div>
-                            {% endif %}
-                            <div class="meta-item">
-                                <i class="fas fa-clock me-2"></i>
-                                Created: {{ task.created_at.strftime('%B %d, %Y') }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-</div>
-
-<div class="task-summary glass-card p-4 mt-4">
-    <div class="row text-center">
-        <div class="col-md-4">
-            <div class="summary-item">
-                <i class="fas fa-clipboard-list fa-2x mb-2" style="color: #667eea;"></i>
-                <h3 class="mb-0">{{ tasks|length }}</h3>
-                <small class="text-white opacity-75">Total Tasks</small>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="summary-item">
-                <i class="fas fa-check-circle fa-2x mb-2" style="color: #28a745;"></i>
-                <h3 class="mb-0">{{ tasks|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
-                <small class="text-white opacity-75">Completed</small>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="summary-item">
-                <i class="fas fa-hourglass-half fa-2x mb-2" style="color: #ffc107;"></i>
-                <h3 class="mb-0">{{ tasks|selectattr('status', 'ne', 'completed')|list|length }}</h3>
-                <small class="text-white opacity-75">Pending</small>
-            </div>
-        </div>
-    </div>
-</div>
-{% else %}
-<div class="glass-card p-5 text-center">
-    <i class="fas fa-tasks fa-4x mb-4" style="color: rgba(255,255,255,0.5);"></i>
-    <h3 class="text-white mb-3">No Tasks Yet</h3>
-    <p class="text-white opacity-75 mb-4">Start tracking work for {{ project.name }} by adding your first task.</p>
-    <button class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-        <i class="fas fa-plus me-2"></i>Add First Task
-    </button>
-</div>
-{% endif %}
-
+{% block extra_css %}
 <style>
+    .kanban-board {
+        display: flex;
+        gap: 1.5rem;
+        overflow-x: auto;
+        padding-bottom: 1rem;
+    }
+    
+    .kanban-column {
+        flex: 1;
+        min-width: 300px;
+        max-width: 400px;
+    }
+    
+    .kanban-column-header {
+        padding: 1rem 1.25rem;
+        border-radius: 16px 16px 0 0;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0;
+    }
+    
+    .kanban-column-header .count {
+        background: rgba(255,255,255,0.2);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+    }
+    
+    .kanban-column.pending .kanban-column-header {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: #fff;
+    }
+    
+    .kanban-column.in_progress .kanban-column-header {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: #fff;
+    }
+    
+    .kanban-column.completed .kanban-column-header {
+        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+        color: #fff;
+    }
+    
+    .kanban-column-body {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: none;
+        border-radius: 0 0 16px 16px;
+        padding: 1rem;
+        min-height: 400px;
+    }
+    
+    .kanban-column-body.drag-over {
+        background: rgba(102, 126, 234, 0.15);
+        border-color: #667eea;
+    }
+    
+    .kanban-task {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 0.75rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        cursor: grab;
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+    }
+    
+    .kanban-task:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        border-left-color: #e94560;
+    }
+    
+    .kanban-task.dragging {
+        opacity: 0.5;
+        transform: rotate(3deg);
+    }
+    
+    .kanban-task-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 0.5rem;
+        word-break: break-word;
+    }
+    
+    .kanban-task-meta {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .kanban-task-empty {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: rgba(255, 255, 255, 0.5);
+    }
+    
+    .kanban-task-empty i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.5;
+    }
+    
+    .task-ghost {
+        opacity: 0.4;
+        background: #667eea !important;
+    }
+    
+    .task-chosen {
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+    
     .project-icon {
         width: 50px;
         height: 50px;
@@ -187,25 +174,7 @@
     .btn-sparkle.loading {
         background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
     }
-    .task-card {
-        border-left: 4px solid transparent;
-        transition: all 0.3s ease;
-    }
-    .task-card:hover {
-        border-left-color: #e94560;
-    }
-    .task-title {
-        font-weight: 600;
-        color: #333;
-    }
-    .task-description {
-        font-size: 0.95rem;
-        line-height: 1.6;
-    }
-    .meta-item {
-        font-size: 0.85rem;
-        color: rgba(255, 255, 255, 0.7);
-    }
+    
     .summary-item h3 {
         font-size: 2.5rem;
         font-weight: 700;
@@ -215,6 +184,186 @@
         background-clip: text;
     }
 </style>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="fas fa-columns me-3"></i>{{ project.name }}'s Tasks</h1>
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('clients') }}">Clients</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('client_projects', client_id=project.client_id) }}">{{ project.client.name }}</a></li>
+        <li class="breadcrumb-item active">{{ project.name }}</li>
+    </ol>
+</nav>
+
+<div class="glass-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center">
+            <div class="project-icon me-3">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <div>
+                <h4 class="mb-0">{{ project.name }}</h4>
+                <small class="text-white opacity-75">
+                    <span class="badge badge-modern {% if project.status == 'active' %}bg-success{% elif project.status == 'completed' %}bg-primary{% else %}bg-secondary{% endif %}">
+                        {{ project.status|title }}
+                    </span>
+                    {% if project.budget %}
+                    <span class="ms-2">Budget: ${{ "%.2f"|format(project.budget) }}</span>
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                <i class="fas fa-plus me-2"></i>Add Task
+            </button>
+            <form action="{{ url_for('generate_ai_tasks', project_id=project.id) }}" method="POST" id="aiGenerateForm">
+                <button type="submit" class="btn btn-sparkle" id="aiGenerateBtn">
+                    <span class="btn-text">
+                        <i class="fas fa-magic me-2"></i>Auto-Generate with AI
+                    </span>
+                    <span class="btn-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Generating...
+                    </span>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="kanban-board" id="kanbanBoard">
+    <div class="kanban-column pending" data-status="pending">
+        <div class="kanban-column-header">
+            <span><i class="fas fa-clock me-2"></i>Pending</span>
+            <span class="count" id="pendingCount">{{ tasks|selectattr('status', 'equalto', 'pending')|list|length }}</span>
+        </div>
+        <div class="kanban-column-body" id="pendingColumn">
+            {% for task in tasks %}
+                {% if task.status == 'pending' %}
+                <div class="kanban-task" data-task-id="{{ task.id }}" draggable="true">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="priority-badge badge-modern {% if task.priority == 'high' %}bg-danger{% elif task.priority == 'medium' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {% if task.priority == 'high' %}<i class="fas fa-exclamation-circle me-1"></i>{% elif task.priority == 'medium' %}<i class="fas fa-minus-circle me-1"></i>{% else %}<i class="fas fa-arrow-down me-1"></i>{% endif %}
+                            {{ task.priority|title }}
+                        </span>
+                    </div>
+                    <div class="kanban-task-title">{{ task.title }}</div>
+                    {% if task.description %}
+                    <div class="kanban-task-meta mb-2">{{ task.description[:60] }}{% if task.description|length > 60 %}...{% endif %}</div>
+                    {% endif %}
+                    {% if task.due_date %}
+                    <div class="kanban-task-meta">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        {{ task.due_date.strftime('%b %d, %Y') }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% endfor %}
+            {% if not tasks|selectattr('status', 'equalto', 'pending')|list %}
+            <div class="kanban-task-empty">
+                <i class="fas fa-inbox"></i>
+                <p class="mb-0">No pending tasks</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="kanban-column in_progress" data-status="in_progress">
+        <div class="kanban-column-header">
+            <span><i class="fas fa-spinner me-2"></i>In Progress</span>
+            <span class="count" id="inProgressCount">{{ tasks|selectattr('status', 'equalto', 'in_progress')|list|length }}</span>
+        </div>
+        <div class="kanban-column-body" id="inProgressColumn">
+            {% for task in tasks %}
+                {% if task.status == 'in_progress' %}
+                <div class="kanban-task" data-task-id="{{ task.id }}" draggable="true">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="priority-badge badge-modern {% if task.priority == 'high' %}bg-danger{% elif task.priority == 'medium' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                            {% if task.priority == 'high' %}<i class="fas fa-exclamation-circle me-1"></i>{% elif task.priority == 'medium' %}<i class="fas fa-minus-circle me-1"></i>{% else %}<i class="fas fa-arrow-down me-1"></i>{% endif %}
+                            {{ task.priority|title }}
+                        </span>
+                    </div>
+                    <div class="kanban-task-title">{{ task.title }}</div>
+                    {% if task.description %}
+                    <div class="kanban-task-meta mb-2">{{ task.description[:60] }}{% if task.description|length > 60 %}...{% endif %}</div>
+                    {% endif %}
+                    {% if task.due_date %}
+                    <div class="kanban-task-meta">
+                        <i class="fas fa-calendar-alt me-1"></i>
+                        {{ task.due_date.strftime('%b %d, %Y') }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% endfor %}
+            {% if not tasks|selectattr('status', 'equalto', 'in_progress')|list %}
+            <div class="kanban-task-empty">
+                <i class="fas fa-rocket"></i>
+                <p class="mb-0">Drag tasks here</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="kanban-column completed" data-status="completed">
+        <div class="kanban-column-header">
+            <span><i class="fas fa-check-circle me-2"></i>Completed</span>
+            <span class="count" id="completedCount">{{ tasks|selectattr('status', 'equalto', 'completed')|list|length }}</span>
+        </div>
+        <div class="kanban-column-body" id="completedColumn">
+            {% for task in tasks %}
+                {% if task.status == 'completed' %}
+                <div class="kanban-task" data-task-id="{{ task.id }}" draggable="true">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="priority-badge badge-modern bg-success">
+                            <i class="fas fa-check-circle me-1"></i>Done
+                        </span>
+                    </div>
+                    <div class="kanban-task-title" style="text-decoration: line-through; opacity: 0.7;">{{ task.title }}</div>
+                    {% if task.description %}
+                    <div class="kanban-task-meta mb-2">{{ task.description[:60] }}{% if task.description|length > 60 %}...{% endif %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            {% endfor %}
+            {% if not tasks|selectattr('status', 'equalto', 'completed')|list %}
+            <div class="kanban-task-empty">
+                <i class="fas fa-trophy"></i>
+                <p class="mb-0">Complete tasks</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="task-summary glass-card p-4 mt-4">
+    <div class="row text-center">
+        <div class="col-md-4">
+            <div class="summary-item">
+                <i class="fas fa-clipboard-list fa-2x mb-2" style="color: #667eea;"></i>
+                <h3 class="mb-0">{{ tasks|length }}</h3>
+                <small class="text-white opacity-75">Total Tasks</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-item">
+                <i class="fas fa-check-circle fa-2x mb-2" style="color: #28a745;"></i>
+                <h3 class="mb-0">{{ tasks|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
+                <small class="text-white opacity-75">Completed</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-item">
+                <i class="fas fa-hourglass-half fa-2x mb-2" style="color: #ffc107;"></i>
+                <h3 class="mb-0">{{ tasks|selectattr('status', 'ne', 'completed')|list|length }}</h3>
+                <small class="text-white opacity-75">In Progress</small>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="modal fade" id="addTaskModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -264,6 +413,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>
 document.getElementById('aiGenerateForm').addEventListener('submit', function(e) {
     const btn = document.getElementById('aiGenerateBtn');
@@ -274,6 +424,80 @@ document.getElementById('aiGenerateForm').addEventListener('submit', function(e)
     btn.classList.add('loading');
     btnText.style.display = 'none';
     btnLoading.style.display = 'inline';
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const columns = document.querySelectorAll('.kanban-column-body');
+    
+    columns.forEach(function(column) {
+        new Sortable(column, {
+            group: 'tasks',
+            ghostClass: 'task-ghost',
+            chosenClass: 'task-chosen',
+            dragClass: 'task-dragging',
+            animation: 200,
+            handle: '.kanban-task',
+            draggable: '.kanban-task',
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+            onStart: function(evt) {
+                evt.item.classList.add('dragging');
+            },
+            onEnd: function(evt) {
+                evt.item.classList.remove('dragging');
+                document.querySelectorAll('.kanban-column-body').forEach(function(col) {
+                    col.classList.remove('drag-over');
+                });
+                
+                const taskId = evt.item.dataset.taskId;
+                const newStatus = evt.to.closest('.kanban-column').dataset.status;
+                const oldStatus = evt.from.closest('.kanban-column').dataset.status;
+                
+                if (taskId && newStatus !== oldStatus) {
+                    fetch(`/task/${taskId}/update_status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ status: newStatus })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            updateColumnCounts();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error updating task status:', error);
+                    });
+                }
+            },
+            onMove: function(evt) {
+                return !evt.to.classList.contains('dragging');
+            }
+        });
+    });
+    
+    function updateColumnCounts() {
+        document.querySelectorAll('.kanban-column').forEach(function(column) {
+            const status = column.dataset.status;
+            const count = column.querySelectorAll('.kanban-task').length;
+            const countEl = column.querySelector('.count');
+            if (countEl) {
+                countEl.textContent = count;
+            }
+        });
+    }
+    
+    document.querySelectorAll('.kanban-column-body').forEach(function(column) {
+        column.addEventListener('dragover', function(e) {
+            column.classList.add('drag-over');
+        });
+        column.addEventListener('dragleave', function(e) {
+            if (!column.contains(e.relatedTarget)) {
+                column.classList.remove('drag-over');
+            }
+        });
+    });
 });
 </script>
 {% endblock %}

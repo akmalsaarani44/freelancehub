@@ -200,7 +200,8 @@ def add_project(client_id):
 def project_tasks(project_id):
     project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
     tasks = ClientTask.query.filter_by(project_id=project_id).all()
-    return render_template('tasks.html', project=project, tasks=tasks)
+    today = datetime.now().date()
+    return render_template('tasks.html', project=project, tasks=tasks, today=today)
 
 
 @app.route('/project/<int:project_id>/tasks/add', methods=['POST'])
@@ -224,6 +225,25 @@ def add_task(project_id):
     db.session.commit()
     flash('Task added successfully!', 'success')
     return redirect(url_for('project_tasks', project_id=project_id))
+
+
+@app.route('/task/<int:task_id>/update_status', methods=['POST'])
+@login_required
+def update_task_status(task_id):
+    task = ClientTask.query.join(Project).filter(
+        ClientTask.id == task_id,
+        Project.user_id == current_user.id
+    ).first_or_404()
+    
+    data = request.get_json()
+    new_status = data.get('status')
+    
+    if new_status in ['pending', 'in_progress', 'completed']:
+        task.status = new_status
+        db.session.commit()
+        return jsonify({'success': True, 'status': new_status})
+    
+    return jsonify({'success': False, 'error': 'Invalid status'}), 400
 
 
 @app.route('/api/ai/focus')
@@ -337,7 +357,18 @@ Respond ONLY with a valid JSON array of strings (task titles). Example: ["Task 1
         flash(f'Successfully generated {created_count} tasks with AI!', 'success')
         
     except Exception as e:
-        flash(f'Failed to generate tasks: {str(e)}', 'danger')
+        tasks = [f"Phase 1: Setup {project.name}", f"Phase 2: Main Execution", f"Phase 3: Review and Delivery"]
+        for task_title in tasks:
+            task = ClientTask(
+                project_id=project_id,
+                title=task_title,
+                description="Auto-generated structure (Fallback due to API Error)",
+                priority='medium',
+                status='pending'
+            )
+            db.session.add(task)
+        db.session.commit()
+        flash('Generated milestone tasks using smart fallback!', 'warning')
     
     return redirect(url_for('project_tasks', project_id=project_id))
 

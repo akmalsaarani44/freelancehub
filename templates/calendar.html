@@ -191,8 +191,9 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    {% if calendar_connected and events %}
+    {% if calendar_connected %}
     const calendarEvents = [
+        {% if events %}
         {% for event in events %}
         {
             title: {{ event.summary|tojson if event.summary else 'No Title'|tojson }},
@@ -214,6 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
         {% endfor %}
+        {% endif %}
     ];
     
     var calendarEl = document.getElementById('calendar');
