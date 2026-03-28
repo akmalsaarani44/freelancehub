@@ -1,13 +1,19 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from models import db, User, Client, Project, ClientTask, PersonalToDo
 from datetime import datetime, timedelta
 import os
 import requests
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freelancer.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///freelancer.db')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -261,7 +267,94 @@ def ai_focus():
 @app.route('/calendar')
 @login_required
 def calendar():
-    return render_template('calendar.html')
+    events = None
+    calendar_connected = False
+    
+    if os.path.exists('credentials.json'):
+        creds = session.get('google_creds')
+        if creds:
+            try:
+                credentials = Credentials.from_authorized_user_info(creds)
+                if credentials.valid:
+                    calendar_connected = True
+                    service = build('calendar', 'v3', credentials=credentials)
+                    now = datetime.utcnow().isoformat() + 'Z'
+                    events_result = service.events().list(
+                        calendarId='primary',
+                        timeMin=now,
+                        maxResults=20,
+                        singleEvents=True,
+                        orderBy='startTime'
+                    ).execute()
+                    events = events_result.get('items', [])
+            except Exception:
+                calendar_connected = False
+    
+    return render_template('calendar.html', events=events, calendar_connected=calendar_connected)
+
+
+@app.route('/calendar/authorize')
+@login_required
+def calendar_authorize():
+    if not os.path.exists('credentials.json'):
+        flash('Google Calendar credentials.json not found. Please download it from Google Cloud Console.', 'danger')
+        return redirect(url_for('calendar'))
+    
+    flow = Flow.from_client_secrets_file(
+        'credentials.json',
+        scopes=['https://www.googleapis.com/auth/calendar.readonly']
+    )
+    flow.redirect_uri = url_for('calendar_callback', _external=True)
+    
+    authorization_url, state = flow.authorization_url(access_type='offline', prompt='consent')
+    session['oauth_state'] = state
+    
+    return redirect(authorization_url)
+
+
+@app.route('/calendar/callback')
+@login_required
+def calendar_callback():
+    if not os.path.exists('credentials.json'):
+        flash('Google Calendar credentials.json not found.', 'danger')
+        return redirect(url_for('calendar'))
+    
+    state = session.get('oauth_state')
+    if not state or state != request.args.get('state'):
+        flash('OAuth state mismatch. Please try again.', 'danger')
+        return redirect(url_for('calendar'))
+    
+    flow = Flow.from_client_secrets_file(
+        'credentials.json',
+        scopes=['https://www.googleapis.com/auth/calendar.readonly'],
+        state=state
+    )
+    flow.redirect_uri = url_for('calendar_callback', _external=True)
+    
+    try:
+        flow.fetch_token(authorization_response=request.url)
+        credentials = flow.credentials
+        session['google_creds'] = {
+            'token': credentials.token,
+            'refresh_token': credentials.refresh_token,
+            'token_uri': credentials.token_uri,
+            'client_id': credentials.client_id,
+            'client_secret': credentials.client_secret,
+            'scopes': credentials.scopes
+        }
+        flash('Google Calendar connected successfully!', 'success')
+    except Exception as e:
+        flash(f'Failed to connect Google Calendar: {str(e)}', 'danger')
+    
+    return redirect(url_for('calendar'))
+
+
+@app.route('/calendar/disconnect')
+@login_required
+def calendar_disconnect():
+    session.pop('google_creds', None)
+    flash('Google Calendar disconnected.', 'info')
+    return redirect(url_for('calendar'))
 
 
 def init_db():
