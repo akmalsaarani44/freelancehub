@@ -25,9 +25,16 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Auto-create all DB tables on startup (works with gunicorn on Fly.io)
+# Auto-create all DB tables and seed admin user on startup (works with gunicorn on Fly.io)
 with app.app_context():
     db.create_all()
+    # Create default admin user if it doesn't exist yet
+    if not User.query.filter_by(username='admin').first():
+        admin = User(username='admin', email='admin@freelancehub.fly.dev')
+        admin.set_password('admin123')
+        db.session.add(admin)
+        db.session.commit()
+        print("Default admin user created: admin / admin123")
 
 
 @login_manager.user_loader
