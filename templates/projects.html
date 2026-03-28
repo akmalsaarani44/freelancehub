@@ -33,83 +33,80 @@
 </div>
 
 {% if projects %}
-<div class="card-modern">
-    <div class="table-responsive">
-        <table class="table table-modern mb-0">
-            <thead>
-                <tr>
-                    <th><i class="fas fa-project-diagram me-2"></i>Project</th>
-                    <th><i class="fas fa-tasks me-2"></i>Status</th>
-                    <th><i class="fas fa-dollar-sign me-2"></i>Budget</th>
-                    <th><i class="fas fa-calendar-alt me-2"></i>Start Date</th>
-                    <th><i class="fas fa-calendar-check me-2"></i>End Date</th>
-                    <th><i class="fas fa-clipboard-list me-2"></i>Tasks</th>
-                    <th><i class="fas fa-cog me-2"></i>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for project in projects %}
-                <tr>
-                    <td>
-                        <div class="project-info">
-                            <strong class="project-name">{{ project.name }}</strong>
+<div class="row">
+    {% for project in projects %}
+    <div class="col-lg-6 mb-4">
+        <div class="card-modern h-100">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="d-flex align-items-start">
+                        <div class="project-icon me-3">
+                            <i class="fas fa-project-diagram"></i>
+                        </div>
+                        <div>
+                            <h5 class="project-title mb-1">{{ project.name }}</h5>
                             {% if project.description %}
-                            <br><small class="text-muted">{{ project.description[:60] }}{% if project.description|length > 60 %}...{% endif %}</small>
+                            <small class="text-white opacity-75">{{ project.description[:80] }}{% if project.description|length > 80 %}...{% endif %}</small>
                             {% endif %}
                         </div>
-                    </td>
-                    <td>
+                    </div>
+                    <div class="badges-wrapper d-flex flex-column align-items-end gap-2">
                         <span class="badge badge-modern {% if project.status == 'active' %}bg-success{% elif project.status == 'completed' %}bg-primary{% elif project.status == 'on-hold' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
                             {% if project.status == 'active' %}<i class="fas fa-play-circle me-1"></i>{% elif project.status == 'completed' %}<i class="fas fa-check-circle me-1"></i>{% elif project.status == 'on-hold' %}<i class="fas fa-pause-circle me-1"></i>{% else %}<i class="fas fa-pencil-alt me-1"></i>{% endif %}
                             {{ project.status|title }}
                         </span>
-                    </td>
-                    <td>
                         {% if project.budget %}
-                        <span class="budget-value">${{ "%.2f"|format(project.budget) }}</span>
-                        {% else %}
-                        <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if project.start_date %}
-                        <span class="date-badge">{{ project.start_date.strftime('%b %d, %Y') }}</span>
-                        {% else %}
-                        <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if project.end_date %}
-                        <span class="date-badge">{{ project.end_date.strftime('%b %d, %Y') }}</span>
-                        {% else %}
-                        <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <span class="badge badge-modern bg-info">
-                            <i class="fas fa-list me-1"></i>{{ project.tasks|length }}
+                        <span class="badge badge-modern bg-success">
+                            <i class="fas fa-dollar-sign me-1"></i>${{ "%.2f"|format(project.budget) }}
                         </span>
-                    </td>
-                    <td>
-                        <div class="btn-group-actions">
-                            <a href="{{ url_for('project_tasks', project_id=project.id) }}" class="btn btn-sm btn-outline-primary" title="View Tasks">
-                                <i class="fas fa-eye"></i>
-                            </a>
-                            <button type="button" class="btn btn-sm btn-outline-warning" title="Edit" onclick="openEditProjectModal({{ project.id }}, '{{ project.name }}', '{{ project.description or '' }}', '{{ project.budget or '' }}', {% if project.start_date %}'{{ project.start_date.strftime('%Y-%m-%d') }}'{% else %}''{% endif %}, {% if project.end_date %}'{{ project.end_date.strftime('%Y-%m-%d') }}'{% else %}''{% endif %}, '{{ project.status }}')">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <form action="{{ url_for('delete_project', project_id=project.id) }}" method="POST" class="d-inline">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this project? All tasks will also be deleted.')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="project-details mt-3 pt-3 border-top">
+                    <div class="row">
+                        <div class="col-6">
+                            {% if project.start_date %}
+                            <div class="detail-item mb-2">
+                                <i class="fas fa-calendar-alt text-white opacity-75 me-2"></i>
+                                <span class="text-white opacity-75 small">Started: {{ project.start_date.strftime('%b %d, %Y') }}</span>
+                            </div>
+                            {% endif %}
                         </div>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <div class="col-6">
+                            {% if project.end_date %}
+                            <div class="detail-item mb-2">
+                                <i class="fas fa-calendar-check text-white opacity-75 me-2"></i>
+                                <span class="text-white opacity-75 small">Due: {{ project.end_date.strftime('%b %d, %Y') }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="detail-item">
+                        <span class="badge badge-modern bg-info">
+                            <i class="fas fa-list me-1"></i>{{ project.tasks|length }} Task{% if project.tasks|length != 1 %}s{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pb-3 pt-0">
+                <div class="d-flex gap-3 justify-content-start">
+                    <a href="{{ url_for('project_tasks', project_id=project.id) }}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>View Tasks
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="openEditProjectModal({{ project.id }}, '{{ project.name }}', '{{ project.description or '' }}', '{{ project.budget or '' }}', {% if project.start_date %}'{{ project.start_date.strftime('%Y-%m-%d') }}'{% else %}''{% endif %}, {% if project.end_date %}'{{ project.end_date.strftime('%Y-%m-%d') }}'{% else %}''{% endif %}, '{{ project.status }}')">
+                        <i class="fas fa-edit me-1"></i>Edit
+                    </button>
+                    <form action="{{ url_for('delete_project', project_id=project.id) }}" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this project? All tasks will also be deleted.')">
+                            <i class="fas fa-trash me-1"></i>Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+    {% endfor %}
 </div>
 {% else %}
 <div class="glass-card p-5 text-center">
@@ -123,7 +120,16 @@
 {% endif %}
 
 <style>
-    .client-icon {
+    .card-modern {
+        transition: all 0.3s ease;
+    }
+    
+    .card-modern:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .client-icon, .project-icon {
         width: 50px;
         height: 50px;
         border-radius: 50%;
@@ -133,32 +139,21 @@
         justify-content: center;
         color: #fff;
         font-size: 1.25rem;
+        flex-shrink: 0;
     }
-    .project-info {
-        min-width: 200px;
-    }
-    .project-name {
-        color: #333;
-        font-size: 1rem;
-    }
-    .budget-value {
+    
+    .project-title {
         font-weight: 600;
-        color: #28a745;
+        color: #333;
     }
-    .date-badge {
-        background: rgba(102, 126, 234, 0.1);
-        padding: 0.35rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        color: #667eea;
-        font-weight: 500;
+    
+    .badges-wrapper {
+        flex-shrink: 0;
     }
-    .btn-group-actions {
+    
+    .detail-item {
         display: flex;
-        gap: 0.25rem;
-    }
-    .btn-group-actions .btn {
-        padding: 0.35rem 0.6rem;
+        align-items: center;
     }
 </style>
 
