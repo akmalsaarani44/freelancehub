@@ -184,9 +184,14 @@
                         <small class="text-white opacity-75">Your notes are saved instantly and persist across sessions</small>
                     </div>
                 </div>
-                <div class="autosave-indicator" id="autosaveIndicator">
-                    <i class="fas fa-check-circle text-success"></i>
-                    <span>Saved</span>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="autosave-indicator" id="autosaveIndicator">
+                        <i class="fas fa-check-circle text-success"></i>
+                        <span>Saved</span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-light" id="clearScratchpad" title="Clear notes">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
             </div>
             <div class="card-body p-0">
@@ -337,6 +342,13 @@ if (scratchpad) {
                 autosaveIndicator.classList.remove('show');
             }, 2000);
         }, 300);
+    });
+    
+    document.getElementById('clearScratchpad').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all notes?')) {
+            scratchpad.value = '';
+            localStorage.removeItem(STORAGE_KEY);
+        }
     });
 }
 </script>

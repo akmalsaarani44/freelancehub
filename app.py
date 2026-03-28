@@ -227,6 +227,68 @@ def add_task(project_id):
     return redirect(url_for('project_tasks', project_id=project_id))
 
 
+@app.route('/project/<int:project_id>/edit', methods=['POST'])
+@login_required
+def edit_project(project_id):
+    project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
+    
+    project.name = request.form.get('name')
+    project.description = request.form.get('description')
+    budget = request.form.get('budget')
+    project.budget = float(budget) if budget else None
+    project.start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d') if request.form.get('start_date') else None
+    project.end_date = datetime.strptime(request.form.get('end_date'), '%Y-%m-%d') if request.form.get('end_date') else None
+    project.status = request.form.get('status') or 'draft'
+    
+    db.session.commit()
+    flash('Project updated successfully!', 'success')
+    return redirect(url_for('client_projects', client_id=project.client_id))
+
+
+@app.route('/project/<int:project_id>/delete', methods=['POST'])
+@login_required
+def delete_project(project_id):
+    project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
+    client_id = project.client_id
+    db.session.delete(project)
+    db.session.commit()
+    flash('Project deleted successfully!', 'success')
+    return redirect(url_for('client_projects', client_id=client_id))
+
+
+@app.route('/task/<int:task_id>/edit', methods=['POST'])
+@login_required
+def edit_task(task_id):
+    task = ClientTask.query.join(Project).filter(
+        ClientTask.id == task_id,
+        Project.user_id == current_user.id
+    ).first_or_404()
+    
+    task.title = request.form.get('title')
+    task.description = request.form.get('description')
+    task.priority = request.form.get('priority')
+    task.due_date = datetime.strptime(request.form.get('due_date'), '%Y-%m-%d') if request.form.get('due_date') else None
+    task.status = request.form.get('status') or 'pending'
+    
+    db.session.commit()
+    flash('Task updated successfully!', 'success')
+    return redirect(url_for('project_tasks', project_id=task.project_id))
+
+
+@app.route('/task/<int:task_id>/delete', methods=['POST'])
+@login_required
+def delete_task(task_id):
+    task = ClientTask.query.join(Project).filter(
+        ClientTask.id == task_id,
+        Project.user_id == current_user.id
+    ).first_or_404()
+    project_id = task.project_id
+    db.session.delete(task)
+    db.session.commit()
+    flash('Task deleted successfully!', 'success')
+    return redirect(url_for('project_tasks', project_id=project_id))
+
+
 @app.route('/task/<int:task_id>/update_status', methods=['POST'])
 @login_required
 def update_task_status(task_id):
