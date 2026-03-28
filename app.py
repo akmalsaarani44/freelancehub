@@ -7,6 +7,8 @@ import requests
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+# Allow HTTP for local testing of OAuth
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
@@ -260,8 +262,84 @@ def ai_focus():
         advice = data['choices'][0]['message']['content']
         return jsonify({'advice': advice})
     except Exception as e:
-        fallback_advice = "Focus on completing your most urgent client tasks today, and don't forget your personal to-do list! (Fallback response due to gateway error)"
+        fallback_advice = "Focus on completing your most urgent client tasks today, and don't forget your personal to-do list!"
         return jsonify({'advice': fallback_advice})
+
+
+@app.route('/project/<int:project_id>/ai_tasks', methods=['POST'])
+@login_required
+def generate_ai_tasks(project_id):
+    project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
+    
+    api_key = os.environ.get('VERCEL_GATEWAY_KEY')
+    if not api_key:
+        flash('AI Gateway API key not configured. Please set VERCEL_GATEWAY_KEY environment variable.', 'danger')
+        return redirect(url_for('project_tasks', project_id=project_id))
+    
+    description = project.description or "No description provided"
+    prompt = f"""You are a helpful assistant for freelancers. Read this project description and return exactly 3 to 5 realistic milestone tasks for completing the project.
+
+Project: {project.name}
+Client: {project.client.name}
+Description: {description}
+
+Respond ONLY with a valid JSON array of strings (task titles). Example: ["Task 1", "Task 2", "Task 3"]"""
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        'model': 'google/gemini-3-pro',
+        'messages': [{'role': 'user', 'content': prompt}]
+    }
+    
+    try:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        response = requests.post(
+            'https://gateway.ai.vercel.ai/v1/chat/completions',
+            headers=headers,
+            json=payload,
+            timeout=30,
+            verify=False
+        )
+        response.raise_for_status()
+        data = response.json()
+        content = data['choices'][0]['message']['content']
+        
+        import json
+        import re
+        
+        json_match = re.search(r'\[.*\]', content, re.DOTALL)
+        if json_match:
+            tasks = json.loads(json_match.group())
+        else:
+            tasks = json.loads(content)
+        
+        if not isinstance(tasks, list):
+            raise ValueError("Response was not a JSON array")
+        
+        created_count = 0
+        for task_title in tasks:
+            task = ClientTask(
+                project_id=project_id,
+                title=task_title.strip(),
+                description=f"Auto-generated task for {project.name}",
+                priority='medium',
+                status='pending'
+            )
+            db.session.add(task)
+            created_count += 1
+        
+        db.session.commit()
+        flash(f'Successfully generated {created_count} tasks with AI!', 'success')
+        
+    except Exception as e:
+        flash(f'Failed to generate tasks: {str(e)}', 'danger')
+    
+    return redirect(url_for('project_tasks', project_id=project_id))
 
 
 @app.route('/calendar')

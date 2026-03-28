@@ -31,9 +31,21 @@
                 </small>
             </div>
         </div>
-        <button class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#addTaskModal">
-            <i class="fas fa-plus me-2"></i>Add Task
-        </button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                <i class="fas fa-plus me-2"></i>Add Task
+            </button>
+            <form action="{{ url_for('generate_ai_tasks', project_id=project.id) }}" method="POST" id="aiGenerateForm">
+                <button type="submit" class="btn btn-sparkle" id="aiGenerateBtn">
+                    <span class="btn-text">
+                        <i class="fas fa-magic me-2"></i>Auto-Generate with AI
+                    </span>
+                    <span class="btn-loading" style="display: none;">
+                        <i class="fas fa-spinner fa-spin me-2"></i>Generating...
+                    </span>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -131,6 +143,50 @@
         color: #fff;
         font-size: 1.25rem;
     }
+    
+    .btn-sparkle {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        border: none;
+        color: #fff;
+        padding: 0.625rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(245, 87, 108, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-sparkle::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .btn-sparkle:hover {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow: 0 6px 20px rgba(245, 87, 108, 0.4);
+        color: #fff;
+    }
+    
+    .btn-sparkle:hover::before {
+        left: 100%;
+    }
+    
+    .btn-sparkle:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .btn-sparkle.loading {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+    }
     .task-card {
         border-left: 4px solid transparent;
         transition: all 0.3s ease;
@@ -205,4 +261,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('aiGenerateForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('aiGenerateBtn');
+    const btnText = btn.querySelector('.btn-text');
+    const btnLoading = btn.querySelector('.btn-loading');
+    
+    btn.disabled = true;
+    btn.classList.add('loading');
+    btnText.style.display = 'none';
+    btnLoading.style.display = 'inline';
+});
+</script>
 {% endblock %}
