@@ -3,12 +3,14 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from models import db, User, Client, Project, ClientTask, PersonalToDo
 from datetime import datetime, timedelta
 import os
+import json
 import requests
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-# Allow HTTP for local testing of OAuth
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+# Allow HTTP for local OAuth testing only — do NOT set this in production (Fly.io uses HTTPS)
+if os.environ.get('FLASK_ENV') != 'production':
+    os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-in-production')
@@ -441,7 +443,8 @@ def calendar():
     events = None
     calendar_connected = False
     
-    if os.path.exists('credentials.json'):
+    google_creds_available = os.environ.get('GOOGLE_CREDENTIALS') or os.path.exists('credentials.json')
+    if google_creds_available:
         creds = session.get('google_creds')
         if creds:
             try:
@@ -467,14 +470,22 @@ def calendar():
 @app.route('/calendar/authorize')
 @login_required
 def calendar_authorize():
-    if not os.path.exists('credentials.json'):
-        flash('Google Calendar credentials.json not found. Please download it from Google Cloud Console.', 'danger')
+    google_creds_env = os.environ.get('GOOGLE_CREDENTIALS')
+    if not google_creds_env and not os.path.exists('credentials.json'):
+        flash('Google Calendar credentials not found. Please set GOOGLE_CREDENTIALS or provide credentials.json.', 'danger')
         return redirect(url_for('calendar'))
     
-    flow = Flow.from_client_secrets_file(
-        'credentials.json',
-        scopes=['https://www.googleapis.com/auth/calendar.readonly']
-    )
+    if google_creds_env:
+        client_config = json.loads(google_creds_env)
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=['https://www.googleapis.com/auth/calendar.readonly']
+        )
+    else:
+        flow = Flow.from_client_secrets_file(
+            'credentials.json',
+            scopes=['https://www.googleapis.com/auth/calendar.readonly']
+        )
     flow.redirect_uri = url_for('calendar_callback', _external=True)
     
     authorization_url, state = flow.authorization_url(access_type='offline', prompt='consent')
@@ -486,8 +497,9 @@ def calendar_authorize():
 @app.route('/calendar/callback')
 @login_required
 def calendar_callback():
-    if not os.path.exists('credentials.json'):
-        flash('Google Calendar credentials.json not found.', 'danger')
+    google_creds_env = os.environ.get('GOOGLE_CREDENTIALS')
+    if not google_creds_env and not os.path.exists('credentials.json'):
+        flash('Google Calendar credentials not found.', 'danger')
         return redirect(url_for('calendar'))
     
     state = session.get('oauth_state')
@@ -495,11 +507,19 @@ def calendar_callback():
         flash('OAuth state mismatch. Please try again.', 'danger')
         return redirect(url_for('calendar'))
     
-    flow = Flow.from_client_secrets_file(
-        'credentials.json',
-        scopes=['https://www.googleapis.com/auth/calendar.readonly'],
-        state=state
-    )
+    if google_creds_env:
+        client_config = json.loads(google_creds_env)
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=['https://www.googleapis.com/auth/calendar.readonly'],
+            state=state
+        )
+    else:
+        flow = Flow.from_client_secrets_file(
+            'credentials.json',
+            scopes=['https://www.googleapis.com/auth/calendar.readonly'],
+            state=state
+        )
     flow.redirect_uri = url_for('calendar_callback', _external=True)
     
     try:

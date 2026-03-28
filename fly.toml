@@ -1,0 +1,32 @@
+# fly.toml - Fly.io configuration for FreelanceHub
+# Generated for deployment to Fly.io free tier
+
+app = "freelancehub"
+primary_region = "sin"  # Singapore — closest free region to Malaysia
+
+[build]
+  # Uses the Dockerfile in this directory
+  dockerfile = "Dockerfile"
+
+[env]
+  # Non-secret environment variables only
+  # All secrets (SECRET_KEY, VERCEL_GATEWAY_KEY, DATABASE_URL, GOOGLE_CREDENTIALS)
+  # must be set via: fly secrets set KEY="value"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true          # Redirect all HTTP to HTTPS automatically
+  auto_stop_machines = true   # Spin down when idle (saves free tier quota)
+  auto_start_machines = true  # Spin back up on first request
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256             # Free tier: 256MB RAM
