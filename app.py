@@ -1,0 +1,280 @@
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from models import db, User, Client, Project, ClientTask, PersonalToDo
+from datetime import datetime, timedelta
+import os
+import requests
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your-secret-key-change-in-production'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///freelancer.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+@app.route('/')
+@login_required
+def index():
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    today = datetime.now().date()
+    soon = today + timedelta(days=7)
+    
+    personal_todos = PersonalToDo.query.filter_by(user_id=current_user.id, status='pending').order_by(PersonalToDo.due_date.asc().nullslast()).all()
+    
+    upcoming_tasks = ClientTask.query.join(Project).filter(
+        Project.user_id == current_user.id,
+        ClientTask.status != 'completed'
+    ).filter(
+        (ClientTask.due_date >= today) & (ClientTask.due_date <= soon)
+    ).order_by(ClientTask.due_date.asc()).all()
+    
+    total_clients = Client.query.filter_by(user_id=current_user.id).count()
+    active_projects = Project.query.filter_by(user_id=current_user.id, status='active').count()
+    
+    return render_template('dashboard.html', personal_todos=personal_todos, upcoming_tasks=upcoming_tasks, total_clients=total_clients, active_projects=active_projects, today=today)
+
+
+@app.route('/todos/add', methods=['POST'])
+@login_required
+def add_todo():
+    title = request.form.get('title')
+    due_date = request.form.get('due_date')
+    
+    todo = PersonalToDo(
+        user_id=current_user.id,
+        title=title,
+        due_date=datetime.strptime(due_date, '%Y-%m-%d') if due_date else None
+    )
+    db.session.add(todo)
+    db.session.commit()
+    flash('To-do added!', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/todos/<int:todo_id>/delete', methods=['POST'])
+@login_required
+def delete_todo(todo_id):
+    todo = PersonalToDo.query.filter_by(id=todo_id, user_id=current_user.id).first_or_404()
+    db.session.delete(todo)
+    db.session.commit()
+    flash('To-do deleted!', 'success')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('index'))
+        else:
+            flash('Invalid username or password', 'danger')
+    
+    return render_template('login.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+
+@app.route('/clients')
+@login_required
+def clients():
+    client_list = Client.query.filter_by(user_id=current_user.id).all()
+    return render_template('clients.html', clients=client_list)
+
+
+@app.route('/clients/add', methods=['POST'])
+@login_required
+def add_client():
+    name = request.form.get('name')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    company = request.form.get('company')
+    notes = request.form.get('notes')
+    
+    client = Client(user_id=current_user.id, name=name, email=email, phone=phone, company=company, notes=notes)
+    db.session.add(client)
+    db.session.commit()
+    flash('Client added successfully!', 'success')
+    return redirect(url_for('clients'))
+
+
+@app.route('/clients/<int:client_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_client(client_id):
+    client = Client.query.filter_by(id=client_id, user_id=current_user.id).first_or_404()
+    
+    if request.method == 'POST':
+        client.name = request.form.get('name')
+        client.email = request.form.get('email')
+        client.phone = request.form.get('phone')
+        client.company = request.form.get('company')
+        client.notes = request.form.get('notes')
+        db.session.commit()
+        flash('Client updated successfully!', 'success')
+        return redirect(url_for('clients'))
+    
+    return render_template('edit_client.html', client=client)
+
+
+@app.route('/clients/<int:client_id>/delete', methods=['POST'])
+@login_required
+def delete_client(client_id):
+    client = Client.query.filter_by(id=client_id, user_id=current_user.id).first_or_404()
+    db.session.delete(client)
+    db.session.commit()
+    flash('Client deleted successfully!', 'success')
+    return redirect(url_for('clients'))
+
+
+@app.route('/client/<int:client_id>/projects')
+@login_required
+def client_projects(client_id):
+    client = Client.query.filter_by(id=client_id, user_id=current_user.id).first_or_404()
+    projects = Project.query.filter_by(client_id=client_id).all()
+    return render_template('projects.html', client=client, projects=projects)
+
+
+@app.route('/client/<int:client_id>/projects/add', methods=['POST'])
+@login_required
+def add_project(client_id):
+    client = Client.query.filter_by(id=client_id, user_id=current_user.id).first_or_404()
+    
+    name = request.form.get('name')
+    description = request.form.get('description')
+    budget = request.form.get('budget')
+    start_date = request.form.get('start_date')
+    end_date = request.form.get('end_date')
+    
+    project = Project(
+        user_id=current_user.id,
+        client_id=client_id,
+        name=name,
+        description=description,
+        budget=float(budget) if budget else None,
+        start_date=datetime.strptime(start_date, '%Y-%m-%d') if start_date else None,
+        end_date=datetime.strptime(end_date, '%Y-%m-%d') if end_date else None
+    )
+    db.session.add(project)
+    db.session.commit()
+    flash('Project added successfully!', 'success')
+    return redirect(url_for('client_projects', client_id=client_id))
+
+
+@app.route('/project/<int:project_id>/tasks')
+@login_required
+def project_tasks(project_id):
+    project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
+    tasks = ClientTask.query.filter_by(project_id=project_id).all()
+    return render_template('tasks.html', project=project, tasks=tasks)
+
+
+@app.route('/project/<int:project_id>/tasks/add', methods=['POST'])
+@login_required
+def add_task(project_id):
+    project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
+    
+    title = request.form.get('title')
+    description = request.form.get('description')
+    priority = request.form.get('priority')
+    due_date = request.form.get('due_date')
+    
+    task = ClientTask(
+        project_id=project_id,
+        title=title,
+        description=description,
+        priority=priority,
+        due_date=datetime.strptime(due_date, '%Y-%m-%d') if due_date else None
+    )
+    db.session.add(task)
+    db.session.commit()
+    flash('Task added successfully!', 'success')
+    return redirect(url_for('project_tasks', project_id=project_id))
+
+
+@app.route('/api/ai/focus')
+@login_required
+def ai_focus():
+    api_key = os.environ.get('VERCEL_GATEWAY_KEY')
+    if not api_key:
+        return jsonify({'error': 'AI Gateway API key not configured'}), 500
+    
+    tasks_text = "Your tasks: Complete project report, Review client feedback, Update portfolio website."
+    
+    prompt = f"You are a helpful assistant for a freelancer. Given my tasks, give me a very short 2-sentence focus advice for today. Tasks: {tasks_text}"
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        'model': 'google/gemini-3-pro',
+        'messages': [{'role': 'user', 'content': prompt}]
+    }
+    
+    try:
+        import urllib3
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        response = requests.post(
+            'https://gateway.ai.vercel.ai/v1/chat/completions',
+            headers=headers,
+            json=payload,
+            timeout=10,
+            verify=False
+        )
+        response.raise_for_status()
+        data = response.json()
+        advice = data['choices'][0]['message']['content']
+        return jsonify({'advice': advice})
+    except Exception as e:
+        fallback_advice = "Focus on completing your most urgent client tasks today, and don't forget your personal to-do list! (Fallback response due to gateway error)"
+        return jsonify({'advice': fallback_advice})
+
+
+@app.route('/calendar')
+@login_required
+def calendar():
+    return render_template('calendar.html')
+
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin', email='admin@example.com')
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            print("Admin user created: admin / admin123")
+
+
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True)

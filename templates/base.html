@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Freelancer Manager{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --sidebar-bg: #1a1a2e;
+            --sidebar-hover: #16213e;
+            --sidebar-active: #0f3460;
+            --accent: #e94560;
+            --accent-gradient: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .sidebar-brand {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sidebar-brand i {
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 1.6rem;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem 0;
+            overflow-y: auto;
+        }
+
+        .nav-label {
+            padding: 0.75rem 1.5rem 0.5rem;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+
+        .nav-item {
+            margin: 0.25rem 0.75rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.875rem 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            border-radius: 12px;
+            transition: var(--transition);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .nav-link i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        .nav-link:hover {
+            background: var(--sidebar-hover);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        .nav-link.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .nav-link.active i {
+            color: var(--accent);
+        }
+
+        .sidebar-footer {
+            padding: 1.5rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--accent-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        .user-details {
+            flex: 1;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .logout-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.6);
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: var(--transition);
+        }
+
+        .logout-btn:hover {
+            background: rgba(233, 69, 96, 0.2);
+            color: var(--accent);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-modern {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            overflow: hidden;
+        }
+
+        .card-modern:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-modern .card-header {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 1.25rem 1.5rem;
+            font-weight: 600;
+        }
+
+        .card-modern .card-body {
+            padding: 1.5rem;
+        }
+
+        .btn-modern {
+            background: var(--accent-gradient);
+            border: none;
+            color: #fff;
+            padding: 0.625rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: var(--transition);
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.3);
+        }
+
+        .btn-modern:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(233, 69, 96, 0.4);
+            color: #fff;
+        }
+
+        .btn-outline-modern {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .btn-outline-modern:hover {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: var(--transition);
+            border: none;
+            box-shadow: var(--card-shadow);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .stat-icon.purple { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-icon.pink { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .stat-icon.blue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .stat-icon.green { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .table-modern {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .table-modern thead th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border: none;
+            padding: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.85rem;
+        }
+
+        .table-modern thead th:first-child {
+            border-radius: 12px 0 0 12px;
+        }
+
+        .table-modern thead th:last-child {
+            border-radius: 0 12px 12px 0;
+        }
+
+        .table-modern tbody tr {
+            transition: var(--transition);
+        }
+
+        .table-modern tbody tr:hover {
+            background: rgba(102, 126, 234, 0.08);
+            transform: scale(1.01);
+        }
+
+        .table-modern tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .badge-modern {
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.8rem;
+        }
+
+        .alert-modern {
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 16px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .modal-content {
+            border: none;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: var(--accent-gradient);
+            color: #fff;
+            border: none;
+            padding: 1.5rem;
+        }
+
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-footer {
+            border-top: 1px solid rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 0.25rem rgba(233, 69, 96, 0.15);
+        }
+
+        .breadcrumb {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .breadcrumb-item a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .breadcrumb-item.active {
+            color: #6c757d;
+        }
+
+        .list-group-item {
+            border: none;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            transition: var(--transition);
+            padding: 1.25rem;
+        }
+
+        .list-group-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .page-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 2rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 1rem;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    {% if current_user.is_authenticated %}
+    <div class="wrapper">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <a href="{{ url_for('index') }}" class="sidebar-brand">
+                    <i class="fas fa-rocket"></i>
+                    FreelanceHub
+                </a>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-label">Main Menu</div>
+                <div class="nav-item">
+                    <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                        <i class="fas fa-chart-pie"></i>
+                        Dashboard
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="{{ url_for('clients') }}" class="nav-link {% if request.endpoint == 'clients' %}active{% endif %}">
+                        <i class="fas fa-users"></i>
+                        Clients
+                    </a>
+                </div>
+                <div class="nav-item">
+                    <a href="{{ url_for('calendar') }}" class="nav-link {% if request.endpoint == 'calendar' %}active{% endif %}">
+                        <i class="fas fa-calendar-alt"></i>
+                        Events
+                    </a>
+                </div>
+                
+                <div class="nav-label mt-4">Quick Actions</div>
+                <div class="nav-item">
+                    <a href="#" class="nav-link" data-bs-toggle="modal" data-bs-target="#quickAddModal">
+                        <i class="fas fa-plus-circle"></i>
+                        Quick Add
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="user-avatar">{{ current_user.username[0]|upper }}</div>
+                    <div class="user-details">
+                        <div class="user-name">{{ current_user.username }}</div>
+                        <div class="user-role">Freelancer</div>
+                    </div>
+                    <a href="{{ url_for('logout') }}" class="logout-btn" title="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="main-content">
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show alert-modern" role="alert">
+                    <i class="fas fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}exclamation-circle{% elif category == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    {% block content %}{% endblock %}
+    
+    {% if current_user.is_authenticated %}
+        </main>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

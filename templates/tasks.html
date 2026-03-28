@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }}'s Tasks - Freelancer Manager{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="fas fa-tasks me-3"></i>{{ project.name }}'s Tasks</h1>
+
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('clients') }}">Clients</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('client_projects', client_id=project.client_id) }}">{{ project.client.name }}</a></li>
+        <li class="breadcrumb-item active">{{ project.name }}</li>
+    </ol>
+</nav>
+
+<div class="glass-card p-4 mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center">
+            <div class="project-icon me-3">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <div>
+                <h4 class="mb-0">{{ project.name }}</h4>
+                <small class="text-white opacity-75">
+                    <span class="badge badge-modern {% if project.status == 'active' %}bg-success{% elif project.status == 'completed' %}bg-primary{% else %}bg-secondary{% endif %}">
+                        {{ project.status|title }}
+                    </span>
+                    {% if project.budget %}
+                    <span class="ms-2">Budget: ${{ "%.2f"|format(project.budget) }}</span>
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+        <button class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+            <i class="fas fa-plus me-2"></i>Add Task
+        </button>
+    </div>
+</div>
+
+{% if tasks %}
+<div class="row">
+    {% for task in tasks %}
+    <div class="col-12 mb-3">
+        <div class="task-card card-modern">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="task-content flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            <h5 class="task-title mb-0 me-3">{{ task.title }}</h5>
+                            <span class="priority-badge badge-modern {% if task.priority == 'high' %}bg-danger{% elif task.priority == 'medium' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {% if task.priority == 'high' %}<i class="fas fa-exclamation-circle me-1"></i>{% elif task.priority == 'medium' %}<i class="fas fa-minus-circle me-1"></i>{% else %}<i class="fas fa-arrow-down me-1"></i>{% endif %}
+                                {{ task.priority|title }}
+                            </span>
+                            <span class="status-badge badge-modern {% if task.status == 'completed' %}bg-success{% elif task.status == 'in_progress' %}bg-info{% else %}bg-secondary{% endif %} ms-2">
+                                {% if task.status == 'completed' %}<i class="fas fa-check-circle me-1"></i>{% elif task.status == 'in_progress' %}<i class="fas fa-spinner me-1"></i>{% else %}<i class="fas fa-clock me-1"></i>{% endif %}
+                                {{ task.status|replace('_', ' ')|title }}
+                            </span>
+                        </div>
+                        
+                        {% if task.description %}
+                        <p class="task-description text-muted mb-3">{{ task.description }}</p>
+                        {% endif %}
+                        
+                        <div class="task-meta d-flex flex-wrap gap-3">
+                            {% if task.due_date %}
+                            <div class="meta-item">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                <span class="{% if task.due_date < today %}text-danger{% endif %}">
+                                    Due: {{ task.due_date.strftime('%B %d, %Y') }}
+                                </span>
+                            </div>
+                            {% endif %}
+                            <div class="meta-item">
+                                <i class="fas fa-clock me-2"></i>
+                                Created: {{ task.created_at.strftime('%B %d, %Y') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="task-summary glass-card p-4 mt-4">
+    <div class="row text-center">
+        <div class="col-md-4">
+            <div class="summary-item">
+                <i class="fas fa-clipboard-list fa-2x mb-2" style="color: #667eea;"></i>
+                <h3 class="mb-0">{{ tasks|length }}</h3>
+                <small class="text-white opacity-75">Total Tasks</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-item">
+                <i class="fas fa-check-circle fa-2x mb-2" style="color: #28a745;"></i>
+                <h3 class="mb-0">{{ tasks|selectattr('status', 'equalto', 'completed')|list|length }}</h3>
+                <small class="text-white opacity-75">Completed</small>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="summary-item">
+                <i class="fas fa-hourglass-half fa-2x mb-2" style="color: #ffc107;"></i>
+                <h3 class="mb-0">{{ tasks|selectattr('status', 'ne', 'completed')|list|length }}</h3>
+                <small class="text-white opacity-75">Pending</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="glass-card p-5 text-center">
+    <i class="fas fa-tasks fa-4x mb-4" style="color: rgba(255,255,255,0.5);"></i>
+    <h3 class="text-white mb-3">No Tasks Yet</h3>
+    <p class="text-white opacity-75 mb-4">Start tracking work for {{ project.name }} by adding your first task.</p>
+    <button class="btn btn-modern" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+        <i class="fas fa-plus me-2"></i>Add First Task
+    </button>
+</div>
+{% endif %}
+
+<style>
+    .project-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.25rem;
+    }
+    .task-card {
+        border-left: 4px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .task-card:hover {
+        border-left-color: #e94560;
+    }
+    .task-title {
+        font-weight: 600;
+        color: #333;
+    }
+    .task-description {
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+    .meta-item {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.7);
+    }
+    .summary-item h3 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+</style>
+
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Add New Task for {{ project.name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('add_task', project_id=project.id) }}" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label fw-semibold">Task Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" id="title" name="title" placeholder="Design homepage mockup" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label fw-semibold">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Task details..."></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="priority" class="form-label fw-semibold">Priority</label>
+                            <select class="form-select" id="priority" name="priority">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="due_date" class="form-label fw-semibold">Due Date</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                                <input type="date" class="form-control" id="due_date" name="due_date">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-modern">
+                        <i class="fas fa-save me-2"></i>Add Task
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

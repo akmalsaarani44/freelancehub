@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Freelancer Manager{% endblock %}
+
+{% block content %}
+<h1>Welcome, {{ current_user.username }}!</h1>
+<p class="lead">This is your Freelancer Management Dashboard.</p>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Clients</h5>
+                <p class="card-text">Manage your client relationships</p>
+                <a href="#" class="btn btn-primary">View Clients</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Projects</h5>
+                <p class="card-text">Track your active projects</p>
+                <a href="#" class="btn btn-primary">View Projects</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Tasks</h5>
+                <p class="card-text">Check your pending tasks</p>
+                <a href="#" class="btn btn-primary">View Tasks</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

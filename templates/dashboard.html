@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Freelancer Manager{% endblock %}
+
+{% block content %}
+<h1 class="page-title"><i class="fas fa-chart-line me-3"></i>Dashboard</h1>
+
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="stat-value">{{ total_clients }}</div>
+            <div class="stat-label">Total Clients</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon pink">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <div class="stat-value">{{ active_projects }}</div>
+            <div class="stat-label">Active Projects</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <div class="stat-value">{{ personal_todos|length }}</div>
+            <div class="stat-label">Personal Tasks</div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="fas fa-calendar-week"></i>
+            </div>
+            <div class="stat-value">{{ upcoming_tasks|length }}</div>
+            <div class="stat-label">Upcoming Tasks</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card-modern">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-clipboard-list me-2"></i>Personal To-Do</span>
+                <span class="badge bg-light text-dark">{{ personal_todos|length }} pending</span>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_todo') }}" method="POST" class="mb-4">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="title" placeholder="Add a new task..." required>
+                        <input type="date" class="form-control" name="due_date" style="max-width: 150px;">
+                        <button type="submit" class="btn btn-modern"><i class="fas fa-plus"></i></button>
+                    </div>
+                </form>
+                
+                {% if personal_todos %}
+                <ul class="list-group">
+                    {% for todo in personal_todos %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <div class="todo-indicator me-3"></div>
+                                <div>
+                                    <strong>{{ todo.title }}</strong>
+                                    {% if todo.due_date %}
+                                    <br><small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>{{ todo.due_date.strftime('%b %d') }}
+                                        {% if todo.due_date < today %}
+                                        <span class="badge bg-danger ms-2">Overdue</span>
+                                        {% endif %}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <form action="{{ url_for('delete_todo', todo_id=todo.id) }}" method="POST">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-times"></i></button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-3x mb-3 text-success"></i>
+                    <p class="text-muted mb-0">No pending tasks. Great job!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card-modern">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="fas fa-calendar-check me-2"></i>Upcoming Client Tasks</span>
+                <span class="badge bg-light text-dark">This week</span>
+            </div>
+            <div class="card-body">
+                {% if upcoming_tasks %}
+                <ul class="list-group">
+                    {% for task in upcoming_tasks %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <div class="d-flex align-items-center mb-1">
+                                    <strong>{{ task.title }}</strong>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-folder me-1"></i>{{ task.project.name }}
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-user me-1"></i>{{ task.project.client.name }}
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge badge-modern {% if task.priority == 'high' %}bg-danger{% elif task.priority == 'medium' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                    {{ task.priority }}
+                                </span>
+                                <br>
+                                <small class="text-muted mt-1 d-block">{{ task.due_date.strftime('%b %d') }}</small>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-calendar fa-3x mb-3 text-muted"></i>
+                    <p class="text-muted mb-0">No upcoming tasks this week.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card-modern">
+            <div class="card-header">
+                <i class="fas fa-robot me-2"></i>AI Insights
+            </div>
+            <div class="card-body">
+                <button id="getAiAdvice" class="btn btn-modern">
+                    <i class="fas fa-magic me-2"></i>Get Focus Advice
+                </button>
+                <div id="aiAdvice" class="mt-4" style="display: none;">
+                    <div class="glass-card p-4">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="ai-icon me-3">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <h5 class="mb-0">AI Advice</h5>
+                        </div>
+                        <p class="mb-0 lead" id="adviceText"></p>
+                    </div>
+                </div>
+                <div id="aiError" class="mt-4" style="display: none;">
+                    <div class="alert alert-danger mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i><span id="errorText"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .todo-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .ai-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('getAiAdvice').addEventListener('click', async function() {
+    const btn = this;
+    const adviceDiv = document.getElementById('aiAdvice');
+    const errorDiv = document.getElementById('aiError');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+    adviceDiv.style.display = 'none';
+    errorDiv.style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/ai/focus');
+        const data = await response.json();
+        
+        if (response.ok) {
+            document.getElementById('adviceText').textContent = data.advice;
+            adviceDiv.style.display = 'block';
+        } else {
+            document.getElementById('errorText').textContent = 'Error: ' + (data.error || 'Something went wrong');
+            errorDiv.style.display = 'block';
+        }
+    } catch (err) {
+        document.getElementById('errorText').textContent = 'Network error. Please try again.';
+        errorDiv.style.display = 'block';
+    }
+    
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-magic me-2"></i>Get Focus Advice';
+});
+</script>
+{% endblock %}
